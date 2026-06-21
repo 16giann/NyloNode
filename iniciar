@@ -1,0 +1,67 @@
+#!/bin/bash
+echo "Iniciando NyloNode..."
+
+#TERMINALES
+
+# Backend
+cd backend
+source venv/bin/activate
+python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+
+# ngrok
+cd /Users/notgiann/nylonode
+ngrok http 8000
+
+# App
+cd NyloNodeApp
+npx expo start --tunnel
+
+#simular historial 
+cd backend
+source venv/bin/activate
+python3 -c "
+import sqlite3, datetime
+conn = sqlite3.connect('nylonode.db')
+conn.execute(
+    'INSERT INTO eventos (timestamp, magnitud, tipo, confianza, imagen, usuario) VALUES (?,?,?,?,?,?)',
+    (datetime.datetime.now().isoformat(), 2.3, 'no_natural', 0.87, '', 'usuario_1')
+)
+conn.execute(
+    'INSERT INTO eventos (timestamp, magnitud, tipo, confianza, imagen, usuario) VALUES (?,?,?,?,?,?)',
+    (datetime.datetime.now().isoformat(), 0.4, 'natural', 0.92, '', 'usuario_1')
+)
+conn.execute(
+    'INSERT INTO eventos (timestamp, magnitud, tipo, confianza, imagen, usuario) VALUES (?,?,?,?,?,?)',
+    (datetime.datetime.now().isoformat(), 3.1, 'no_natural', 0.95, '', 'usuario_1')
+)
+conn.commit()
+conn.close()
+print('Eventos de prueba creados')
+"
+
+
+
+
+
+Para tener súper claro el panorama de tu proyecto y que puedas defenderlo sin problemas ante tu profesor, aquí tienes el resumen exacto de las herramientas que estamos utilizando para cada capa del sistema.
+Como nota rápida sobre el término "Software": El software es todo el código en general. El firmware, el backend y el frontend son simplemente los tres tipos de software que conforman tu proyecto.
+Aquí está el desglose de tu arquitectura:
+1. El Firmware (Lo que va dentro de la placa en el balcón)
+Es el código de bajo nivel que interactúa directamente con la electrónica y toma las decisiones en tiempo real.
+Lenguaje: C++ (estructurado para el entorno de Arduino / PlatformIO).
+Hardware Principal: Placa ESP32-CAM (modelo AI-Thinker).
+Sensor: Acelerómetro ADXL345 (comunicado por el protocolo I2C).
+Inteligencia Artificial (TinyML): Edge Impulse (usando el modelo FOMO). Esto reemplazó a YOLO para que el propio ESP32 analice la imagen sin enviarla por internet.
+Protocolo de Comunicación: MQTT (Librería PubSubClient). Es el mensajero que envía el aviso de "Peligro" al servidor.
+2. El Backend (El servidor que gestiona todo)
+Es el cerebro central. Escucha a las mallas de los edificios, guarda la información y le avisa a los teléfonos.
+Lenguaje: Python.
+Framework de Servidor: FastAPI. Es lo que crea las "rutas" (como /historial o /estado) para que la aplicación móvil pueda pedir datos.
+Base de Datos: SQLite. El archivo donde se guarda el historial de eventos (qué día y a qué hora se movió la malla) y las configuraciones de sensibilidad de cada usuario.
+Receptor de Hardware: Librería paho-mqtt para escuchar los mensajes que envía el ESP32.
+Notificaciones Push: Firebase Cloud Messaging (FCM). La herramienta de Google (librería firebase_admin) que permite mandar el mensaje de alerta al celular en menos de 10 segundos.
+3. El Frontend (La aplicación en el teléfono)
+Es la cara visible del proyecto, la interfaz gráfica (UI) que usa el residente del departamento.
+Framework: React Native. Permite que el código funcione tanto en Android como en iPhone. (Nota: Al principio tu profesor sugirió Kivy, pero el código final que trajiste y revisamos utiliza React Native, que es el estándar actual y más moderno en la industria).
+Lenguaje: TypeScript (archivos .tsx), que combina la lógica de programación con etiquetas de diseño visual (JSX).
+Comunicación con el Servidor: Librería Axios. Se encarga de conectarse a tu backend en Python para preguntar: "¿Cuál es el historial de mi malla?" o "Cambia mi sensibilidad a 2.0g".
